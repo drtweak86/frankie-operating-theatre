@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frankie Operating Theatre — Hacker Lab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#000; --neon:#00FF66; --accent:#00E6FF; --muted:#0b0b0b;
+    --mono:ui-monospace, SFMono-Regular, Menlo, Monaco, "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--neon);font-family:var(--mono)}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1100px;margin:36px auto;padding:18px}
+  .head{display:flex;gap:16px;align-items:center;margin-bottom:18px}
+  .logo{width:88px;height:88px;border-radius:8px;overflow:hidden;box-shadow:0 0 18px rgba(0,255,102,.08)}
+  .logo img{width:100%;height:100%;object-fit:contain;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.6))}
+  h1{margin:0;font-size:28px;letter-spacing:.5px}
+  .sub{color:rgba(0,255,102,.4);font-size:13px;margin-top:6px}
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.03));
+        border:1px solid rgba(0,255,102,.08);border-radius:8px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  h2{margin:0 0 10px 0;font-size:18px}
+  .term{background:#061206;border:1px solid rgba(0,255,102,.08);border-radius:6px;padding:12px;
+        white-space:pre-wrap;line-height:1.5;max-height:420px;overflow:auto;font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{padding:8px 12px;border-radius:6px;background:transparent;color:var(--neon);
+       border:1px solid rgba(0,255,102,.18);cursor:pointer;font-weight:600}
+  .small{font-size:13px;color:rgba(0,255,102,.65)}
+  .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+  .tile{padding:10px;border-radius:6px;background:rgba(0,0,0,.15);border:1px solid rgba(0,255,102,.06);font-size:13px}
+  .foot{margin-top:22px;color:rgba(0,255,102,.22);font-size:12px;text-align:center}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}.logo{width:72px;height:72px}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="head">
+      <div class="logo"><img src="../frankie.png" alt="Frankie"></div>
+      <div>
+        <h1>Frankie Operating Theatre</h1>
+        <div class="sub">Pi resurrections • kernel whispering • build scripts & rescue tools</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card">
+        <h2>Welcome</h2>
+        <div id="intro" class="term"></div>
+
+        <h2 style="margin-top:14px">Quick Start</h2>
+        <p class="small">Run this on your Pi to bootstrap the workstation:</p>
+        <div class="row">
+          <code id="cmd" style="background:rgba(0,255,102,.06);padding:6px 8px;border-radius:6px;border:1px solid rgba(0,255,102,.08);font-size:13px">
+            bash &lt;(curl -fsSL https://raw.githubusercontent.com/drtweak86/frankie-operating-theatre/main/pi-workstation.sh)
+          </code>
+          <button class="btn" id="copy">COPY</button>
+          <a class="btn" href="https://github.com/drtweak86/frankie-operating-theatre" target="_blank">REPO</a>
+        </div>
+
+        <h2 style="margin-top:14px">Scripts</h2>
+        <div class="tiles">
+          <div class="tile"><strong>pi-workstation.sh</strong><div class="small">Desktop & dev tools</div></div>
+          <div class="tile"><strong>pi-dev-recovery.sh</strong><div class="small">Rescue utilities</div></div>
+          <div class="tile"><strong>pi-backup.sh</strong><div class="small">Backup /home/pi</div></div>
+          <div class="tile"><strong>pi-restore.sh</strong><div class="small">Restore from backup</div></div>
+        </div>
+      </main>
+
+      <aside class="card">
+        <h2>Notes</h2>
+        <ul class="small" style="margin-top:6px;line-height:1.5">
+          <li>Use external HDD for big backups.</li>
+          <li><code>make retro</code> for Matrix UI.</li>
+          <li>Fastfetch installed from upstream on Ubuntu ARM.</li>
+        </ul>
+
+        <h2 style="margin-top:14px">Links</h2>
+        <div class="row">
+          <a class="btn" href="https://github.com/drtweak86/frankie-operating-theatre">GitHub</a>
+          <a class="btn" href="https://nixgates.github.io/" target="_blank">Inspo</a>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="foot">Built with ❤️ in the Frankie Operating Theatre — live scripts on GitHub</footer>
+  </div>
+
+<script>
+  // tiny typewriter intro
+  const text = `Booting Frankie Operating Theatre...
+
+Scripts ready:
+ • make workstation
+ • make retro
+ • ./pi-backup.sh
+ • ./pi-restore.sh
+
+Your Pi will rise again.`;
+  const intro = document.getElementById('intro');
+  let i=0; intro.textContent='';
+  const tick = () => { intro.textContent += text[i++]||''; intro.scrollTop=intro.scrollHeight; if(i<text.length) setTimeout(tick, 6); };
+  tick();
+
+  // copy button
+  document.getElementById('copy').onclick = async () => {
+    const cmd = document.getElementById('cmd').innerText.trim();
+    try { await navigator.clipboard.writeText(cmd); const b = document.getElementById('copy'); b.textContent='COPIED'; setTimeout(()=>b.textContent='COPY',1200); }
+    catch(e){ alert('Copy failed.'); }
+  };
+</script>
+</body>
+</html>
