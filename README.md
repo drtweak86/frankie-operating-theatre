@@ -18,7 +18,10 @@ Welcome to the den where Pi’s are resurrected, kernels are tamed, and the grea
 
 ### 🚀 Quick Start
 
+```
 curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-workstation.sh | bash
+
+```
 
 ---
 
