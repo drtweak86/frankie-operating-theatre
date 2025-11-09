@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ARCHIVE="${1:-}"
-[[ -z "$ARCHIVE" ]] && { echo "Usage: $0 /path/to/pi_home_backup_YYYY-MM-DD_HH-MM-SS.tgz"; exit 1; }
-[[ -f "$ARCHIVE" ]] || { echo "Archive not found: $ARCHIVE"; exit 2; }
+USER_NAME="${SUDO_USER:-$USER}"
+HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 
-echo "=== Restoring ${ARCHIVE} to / (will place files under /home/pi) ==="
-sudo tar -xzvf "$ARCHIVE" -C /
-sudo chown -R pi:pi /home/pi || true
-echo "=== Restore complete. Consider rebooting. ==="
+ARCHIVE="${1:-}"
+[[ -z "${ARCHIVE}" ]] && { echo "Usage: $0 /path/to/home_<user>_backup_YYYY-MM-DD_HH-MM-SS.tgz"; exit 1; }
+[[ -f "${ARCHIVE}" ]] || { echo "Archive not found: ${ARCHIVE}"; exit 2; }
+
+echo ">> Restoring archive: ${ARCHIVE}"
+echo ">> Target HOME     : ${HOME_DIR}"
+read -rp "Proceed? (y/N) " yn
+[[ "${yn,,}" == "y" ]] || { echo "Aborted."; exit 0; }
+
+# Extract into HOME; use sudo to preserve original perms/owner where present,
+# then enforce ownership to the target user to be safe.
+sudo tar -xzvf "${ARCHIVE}" -C "${HOME_DIR}"
+sudo chown -R "${USER_NAME}:${USER_NAME}" "${HOME_DIR}"
+
+echo "✅ Restore complete. A reboot/logout is recommended."
