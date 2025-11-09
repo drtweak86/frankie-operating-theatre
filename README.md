@@ -13,14 +13,19 @@ cd frankie-operating-theatre
 chmod +x pi-workstation.sh
 ./pi-workstation.sh
 
-Backup
+## Backup
 
 curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-backup.sh -o pi-backup.sh
 chmod +x pi-backup.sh
 ./pi-backup.sh /mnt/hddroot/PI_BACKUP
 
-Restore
+## Restore
 
 curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-restore.sh -o pi-restore.sh
 chmod +x pi-restore.sh
 ./pi-restore.sh /mnt/hddroot/PI_BACKUP/pi_home_backup_*.tgz
+
+
+## Recovery/Dev Enhancements
+
+curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-dev-recovery.sh | bash
