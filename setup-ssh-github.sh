@@ -1,27 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-read -rp "Git user.name: " GNAME
-read -rp "Git user.email: " GEMAIL
+USER_NAME="${SUDO_USER:-$USER}"
+HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 
-git config --global user.name "$GNAME"
+echo ">> Git identity"
+read -rp "Git user.name  : " GNAME
+read -rp "Git user.email : " GEMAIL
+
+git config --global user.name  "$GNAME"
 git config --global user.email "$GEMAIL"
 git config --global init.defaultBranch main
 git config --global pull.rebase false
+git config --global core.editor "nano"
 
-# SSH key
-KEY="${HOME}/.ssh/id_ed25519"
+# Ensure SSH directory exists & safe perms
+mkdir -p "${HOME_DIR}/.ssh"
+chmod 700 "${HOME_DIR}/.ssh"
+chown -R "${USER_NAME}:${USER_NAME}" "${HOME_DIR}/.ssh"
+
+KEY="${HOME_DIR}/.ssh/id_ed25519"
 if [[ -f "${KEY}" ]]; then
-  echo "SSH key already exists at ${KEY}"
+  echo ">> SSH key already exists: ${KEY}"
 else
-  read -rp "Enter an optional label for the SSH key (e.g. pi@frankie): " LABEL
-  ssh-keygen -t ed25519 -a 100 -f "${KEY}" -N "" -C "${LABEL:-${GEMAIL}}"
+  read -rp "Optional key label (e.g. ${USER_NAME}@frankie): " LABEL
+  sudo -u "${USER_NAME}" ssh-keygen -t ed25519 -a 100 -f "${KEY}" -N "" -C "${LABEL:-$GEMAIL}"
 fi
-eval "$(ssh-agent -s)"
+
+# Start agent & add key (for current shell; login sessions may do this automatically)
+eval "$(ssh-agent -s)" >/dev/null
 ssh-add "${KEY}"
 
-echo "=== Public key (paste this into GitHub → Settings → SSH and GPG keys) ==="
+echo
+echo "=== Public key — add this to GitHub → Settings → SSH and GPG keys ==="
 echo
 cat "${KEY}.pub"
 echo
-echo "Tip: test with 'ssh -T git@github.com' (type 'yes' once)."
+echo "Tip: test with  ssh -T git@github.com  (answer 'yes' on first connect)."
