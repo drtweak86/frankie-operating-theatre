@@ -29,3 +29,10 @@ chmod +x pi-restore.sh
 ## Recovery/Dev Enhancements
 
 curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-dev-recovery.sh | bash
+
+
+## Github SSH set up 
+
+curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/setup-ssh-github.sh -o setup-ssh-github.sh
+chmod +x setup-ssh-github.sh
+./setup-ssh-github.sh
