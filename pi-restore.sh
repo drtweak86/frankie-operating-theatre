@@ -9,11 +9,31 @@ if [ -z "${ARCHIVE}" ] || [ ! -f "${ARCHIVE}" ]; then
   exit 1
 fi
 
-echo "📥  Restoring ${ARCHIVE} → ${TARGET}"
+echo "📥 Restoring from: ${ARCHIVE}"
+echo "→ Target: ${TARGET}"
 
-mkdir -p "${TARGET}"
+# Ensure tools exist
+sudo apt-get install -y pv pigz
 
-sudo tar -xzf "${ARCHIVE}" -C / \
+# Safety: make sure no stupid extraction into wrong place
+if [[ "${TARGET}" != "/home/pi" && "${TARGET}" != "$HOME" ]]; then
+  echo "⚠️  WARNING: Target is not /home/pi"
+  read -rp "Continue restore? (y/N) " confirm
+  [[ "${confirm,,}" == "y" ]] || { echo "Aborted."; exit 1; }
+fi
+
+# Make sure home exists
+sudo mkdir -p "${TARGET}"
+
+# Show archive size before starting
+ls -lh "${ARCHIVE}"
+
+echo "⏳ Restoring with progress bar (pv + pigz)…"
+
+# pigz -d decompresses, tar extracts, pv gives progress
+pv "${ARCHIVE}" | pigz -d | sudo tar -xvf - -C / \
   --same-owner --preserve-permissions
 
-echo "✅ Restore complete."
+echo
+echo "✅ Restore complete!"
+echo "You may want to reboot or log out/in to load restored configs."
