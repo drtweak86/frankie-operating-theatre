@@ -9,12 +9,11 @@ if [ -z "${ARCHIVE}" ] || [ ! -f "${ARCHIVE}" ]; then
   exit 1
 fi
 
-echo "==> Restoring ${ARCHIVE} to ${TARGET}"
-# Safety: create target if missing
+echo "📥  Restoring ${ARCHIVE} → ${TARGET}"
+
 mkdir -p "${TARGET}"
 
-# Extract to root (archive paths contain /home/pi/…)
 sudo tar -xzf "${ARCHIVE}" -C / \
   --same-owner --preserve-permissions
 
-echo "==> Restore complete."
+echo "✅ Restore complete."
