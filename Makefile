@@ -17,16 +17,16 @@ all: help
 help:
 	@echo ""
 	@echo "======= FRANKIE OPERATING THEATRE ======="
-	@echo "make workstation            → Install full desktop, dev tools, theming"
-	@echo "make dev                    → Install recovery & build utilities"
-	@echo "make ssh                    → Configure SSH key + GitHub identity"
-	@echo "make backup                 → Backup /home/pi → $(DEST)"
-	@echo "make restore ARCHIVE=…      → Restore /home/pi from backup"
-	@echo "make flash DISK=/dev/sdX    → Flash Debian image to disk (WARNING!)"
-	@echo "make motd                   → Install the M*A*S*H MOTD"
-	@echo "make pretty-matrix          → Matrix fastfetch + prompt"
-	@echo "make pretty-ui              → XFCE polish (icons, compositor, dock)"
-	@echo "make pretty-dashboard       → Lean fastfetch dashboard"
+	@echo "make workstation              → Install full desktop, dev tools, theming"
+	@echo "make dev                      → Install recovery & build utilities"
+	@echo "make ssh                      → Configure SSH key + GitHub identity"
+	@echo "make backup                   → Backup /home/pi → $(DEST)"
+	@echo "make restore ARCHIVE=…        → Restore /home/pi from backup"
+	@echo "make flash DISK=/dev/sdX      → Flash Debian image to disk (WARNING!)"
+	@echo "make motd                     → Install the M*A*S*H MOTD"
+	@echo "make pretty-matrix            → Matrix fastfetch + prompt"
+	@echo "make pretty-ui                → XFCE polish (icons, compositor, dock)"
+	@echo "make pretty-dashboard         → Lean fastfetch dashboard"
 	@echo ""
 
 workstation:
@@ -78,8 +78,8 @@ pretty-matrix:
 
 pretty-ui:
 	@echo "=== Applying XFCE polish ==="
-	@chmod +x $(SCRIPT_DIR)/pretty-ui.sh
-	@bash $(SCRIPT_DIR)/pretty-ui.sh
+	@chmod +x $(SCRIPT_DIR)/pretty-xfce.sh
+	@bash $(SCRIPT_DIR)/pretty-xfce.sh
 
 pretty-dashboard:
 	@echo "=== Applying lean dashboard ==="
