@@ -3,14 +3,13 @@ set -euo pipefail
 
 echo "=== Frankie Operating Theatre: Workstation Rebuild ==="
 
-# Safety check: ensure we are on Raspberry Pi hardware
-if ! grep -qi 'raspberry pi' /proc/device-tree/model 2>/dev/null; then
-  echo "⚠️  WARNING: This script is intended for Raspberry Pi hardware."
-  read -p "Continue anyway? (y/N) " yn
-  case $yn in
-    [Yy]*) echo "Proceeding..." ;;
-    *)     echo "Aborting."; exit 1 ;;
-  esac
+# Detect model and warn unless Pi 4 or Pi 5
+MODEL="$(tr -d '\0' </proc/device-tree/model 2>/dev/null || echo 'Unknown')"
+echo "Detected: ${MODEL}"
+if ! echo "$MODEL" | grep -Eq 'Raspberry Pi (4|5)'; then
+  echo "⚠️  This script is tuned for Raspberry Pi 4/5."
+  read -rp "Continue anyway? (y/N) " yn
+  [[ "${yn,,}" == "y" ]] || { echo "Aborting."; exit 1; }
 fi
 
 echo "=== Updating system ==="
@@ -21,16 +20,14 @@ echo "=== Installing Full Workstation Toolset ==="
 sudo apt install -y \
   build-essential bc bison flex libssl-dev libncurses5-dev libelf-dev \
   libusb-dev libudev-dev libtool meson ninja-build cmake pkg-config gperf \
-  qemu-user-static \
-  genimage mtools dosfstools parted gddrescue \
+  qemu-user-static genimage mtools dosfstools parted gddrescue \
   e2fsprogs exfatprogs exfat-fuse \
   kodi ffmpeg libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
   libinput-dev mesa-utils alsa-utils pulseaudio pavucontrol \
   python3 python3-dev python3-pip python3-setuptools python3-venv \
-  python3-ctypes python3-pkgutil \
   git curl wget openssh-server net-tools iproute2 network-manager \
   firmware-brcm80211 \
-  htop neofetch ncdu gparted thunar zip unzip xz-utils tar file jq \
+  htop fastfetch ncdu gparted thunar zip unzip xz-utils tar file jq \
   tmux screen vim nano usbutils pciutils \
   ufw fail2ban \
   xfce4 xfce4-goodies \
