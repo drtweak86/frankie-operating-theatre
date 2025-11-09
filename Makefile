@@ -65,3 +65,7 @@ motd:
 	@echo "=== Installing M*A*S*H MOTD ==="
 	@chmod +x mash-motd.sh
 	@./mash-motd.sh
+
+.PHONY: pretty-matrix
+pretty-matrix:
+\tbash scripts/pretty-matrix.sh
