@@ -1,64 +1,101 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Frankie Operating Theatre: Debian Workstation Setup ==="
+# ---------- Detect user & env ----------
+USER_NAME="${SUDO_USER:-$USER}"
+HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+ARCH="$(dpkg --print-architecture)"
+CODENAME="$(. /etc/os-release && echo "${VERSION_CODENAME:-unknown}")"
 
-# Detect model (informational only)
-MODEL="$(tr -d '\0' </proc/device-tree/model 2>/dev/null || echo 'Unknown')"
-echo "Detected: ${MODEL}"
+echo ">> Running as: $USER_NAME ($HOME_DIR) on Ubuntu $CODENAME [$ARCH]"
 
-echo "=== Update & Upgrade ==="
-sudo apt update
-sudo apt full-upgrade -y
-
-echo "=== Desktop & Display Manager (XFCE + LightDM) ==="
-sudo apt install -y xfce4 xfce4-goodies lightdm lightdm-gtk-greeter
-# Force LightDM + XFCE as session (bypass Pi-specific sessions)
-sudo mkdir -p /etc/lightdm/lightdm.conf.d
-printf "[Seat:*]\nuser-session=xfce\n" | sudo tee /etc/lightdm/lightdm.conf.d/50-xfce.conf >/dev/null
-sudo update-alternatives --set x-session-manager /usr/bin/xfce4-session || true
-sudo update-alternatives --set x-window-manager /usr/bin/xfwm4 || true
-sudo systemctl enable --now lightdm
-
-echo "=== Core Dev Tooling & CLI QoL ==="
-sudo apt install -y \
-  build-essential cmake pkg-config git curl wget ca-certificates gnupg lsb-release \
-  bc bison flex libssl-dev libncurses5-dev libelf-dev \
-  python3 python3-venv python3-pip python3-setuptools \
-  fastfetch htop ncdu duf dust tmux screen vim nano file jq ripgrep fd-find \
-  aria2 rsync zip unzip xz-utils p7zip-full p7zip-rar pv \
-  net-tools iproute2 dnsutils openssh-server \
-  gparted gnome-disk-utility
-
-echo "=== Multimedia / GPU bits (for Kodi builds later) ==="
-sudo apt install -y \
-  ffmpeg mesa-utils libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev libinput-dev \
-  alsa-utils pulseaudio pavucontrol
-
-echo "=== Optional: Docker (handy later; logout required to take effect) ==="
-sudo apt install -y docker.io docker-compose-plugin || true
-sudo usermod -aG docker "$USER" || true
-
-echo "=== Optional: Timeshift (easy system restore points) ==="
-sudo apt install -y timeshift || true
-
-echo "=== Theming (nice defaults) ==="
-sudo apt install -y arc-theme papirus-icon-theme plank conky-all || true
-
-echo "=== SSH enable (so you can hop in from phone/PC) ==="
-sudo systemctl enable --now ssh
-
-echo "=== Stop screen blanking (XFCE) ==="
-# xset on login for the current user
-if ! grep -q "xset -dpms" "${HOME}/.xprofile" 2>/dev/null; then
-  {
-    echo 'xset -dpms'
-    echo 'xset s off'
-    echo 'xset s noblank'
-  } >> "${HOME}/.xprofile"
+# ---------- Preflight ----------
+if ! command -v apt >/dev/null 2>&1; then
+  echo "This script expects an apt-based system (Ubuntu/Debian). Aborting."
+  exit 1
 fi
 
-echo "=== Optional: Argon One support (uncomment to enable) ==="
-# curl -fsSL https://download.argon40.com/argon1.sh | bash
+sudo apt update
+sudo apt install -y software-properties-common ca-certificates gnupg lsb-release
 
-echo "=== Done. Reboot recommended. ==="
+# Universe (needed for a few packages)
+sudo add-apt-repository -y universe || true
+sudo apt update
+
+# ---------- Core workstation toolchain ----------
+sudo apt install -y \
+  build-essential gcc g++ make cmake pkg-config ninja-build meson \
+  git curl wget unzip zip jq ripgrep fd-find fzf \
+  python3 python3-pip python3-venv python3-dev \
+  libssl-dev libffi-dev \
+  tmux htop ncdu fastfetch neovim \
+  rclone rsync pv \
+  net-tools iproute2 nmap \
+  xdg-utils
+
+# symlink fd to fdfind if needed
+if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
+  sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+fi
+
+# ---------- OpenSSH server ----------
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+
+# ---------- Docker (official repo) ----------
+if ! command -v docker >/dev/null 2>&1; then
+  echo ">> Installing Docker CE..."
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable" \
+    | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+  sudo apt update
+  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo usermod -aG docker "$USER_NAME" || true
+  echo ">> Docker installed. You must log out/in (or reboot) to use docker without sudo."
+fi
+
+# ---------- GNOME/Wayland: disable screen blank & lock ----------
+maybe_set_gsettings() {
+  # Use the target user's DBus session if available
+  local uid; uid="$(id -u "$USER_NAME")"
+  local bus="unix:path=/run/user/${uid}/bus"
+  if sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$bus" gsettings writable org.gnome.desktop.session idle-delay >/dev/null 2>&1; then
+    sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$bus" gsettings set org.gnome.desktop.session idle-delay 0 || true
+    sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="$bus" gsettings set org.gnome.desktop.screensaver lock-enabled false || true
+    echo ">> GNOME idle/lock disabled."
+  else
+    echo ">> Could not reach GNOME session bus (headless?). Skipping idle/lock tweaks."
+  fi
+}
+maybe_set_gsettings
+
+# ---------- Quality-of-life dotfiles ----------
+# tmux
+TMUX_CONF="${HOME_DIR}/.tmux.conf"
+if [[ ! -f "$TMUX_CONF" ]]; then
+  cat <<'TMUX' | sudo -u "$USER_NAME" tee "$TMUX_CONF" >/dev/null
+set -g mouse on
+setw -g mode-keys vi
+set -g history-limit 100000
+set -g status-bg colour236
+set -g status-fg white
+bind r source-file ~/.tmux.conf \; display "reloaded"
+TMUX
+fi
+
+# fastfetch default
+PROFILE_DIR="${HOME_DIR}/.config"
+sudo -u "$USER_NAME" mkdir -p "${PROFILE_DIR}"
+if command -v fastfetch >/dev/null 2>&1 && [[ ! -f "${PROFILE_DIR}/fastfetch/config.jsonc" ]]; then
+  sudo -u "$USER_NAME" fastfetch --gen-config >/dev/null 2>&1 || true
+fi
+
+# ---------- Fin ----------
+sudo apt upgrade -y
+echo
+echo "✅ Workstation setup complete."
+echo "   - SSH is enabled."
+echo "   - Docker installed (log out/in to use without sudo)."
+echo "   - GNOME screen blanking disabled (if session detected)."
