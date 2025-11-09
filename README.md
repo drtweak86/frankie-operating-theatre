@@ -12,3 +12,15 @@ git clone https://github.com/Drtweak86/frankie-operating-theatre.git
 cd frankie-operating-theatre
 chmod +x pi-workstation.sh
 ./pi-workstation.sh
+
+Backup
+
+curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-backup.sh -o pi-backup.sh
+chmod +x pi-backup.sh
+./pi-backup.sh /mnt/hddroot/PI_BACKUP
+
+Restore
+
+curl -fsSL https://raw.githubusercontent.com/Drtweak86/frankie-operating-theatre/main/pi-restore.sh -o pi-restore.sh
+chmod +x pi-restore.sh
+./pi-restore.sh /mnt/hddroot/PI_BACKUP/pi_home_backup_*.tgz
