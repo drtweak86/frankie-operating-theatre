@@ -99,3 +99,35 @@ echo "✅ Workstation setup complete."
 echo "   - SSH is enabled."
 echo "   - Docker installed (log out/in to use without sudo)."
 echo "   - GNOME screen blanking disabled (if session detected)."
+
+# ---- Fastfetch installer (Ubuntu ARM safe) ----
+install_fastfetch() {
+  if command -v fastfetch >/dev/null 2>&1; then
+    echo "[✓] fastfetch already installed"
+    return
+  fi
+
+  echo "[+] Installing fastfetch (Ubuntu ARM)"
+  tmp=/tmp/fastfetch.tar.gz
+  curl -fsSL -o "$tmp" \
+    https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-aarch64-polyfilled.tar.gz || {
+      echo "[-] Download failed"; return 1; }
+
+  # Extract with correct /usr layout from the tar
+  sudo tar -xzf "$tmp" -C / || { echo "[-] Extract failed"; return 1; }
+
+  # Ensure it's on PATH
+  if [ -x /usr/bin/fastfetch ]; then
+    sudo ln -sf /usr/bin/fastfetch /usr/local/bin/fastfetch
+  elif [ -x /usr/local/bin/fastfetch-linux-aarch64-polyfilled/usr/bin/fastfetch ]; then
+    sudo ln -sf /usr/local/bin/fastfetch-linux-aarch64-polyfilled/usr/bin/fastfetch /usr/local/bin/fastfetch
+  fi
+
+  if ! command -v fastfetch >/dev/null 2>&1; then
+    echo "[-] fastfetch not found on PATH after install"; return 1
+  fi
+
+  echo "[✓] fastfetch installed"
+}
+install_fastfetch
+# ---- /Fastfetch installer ----------------------
