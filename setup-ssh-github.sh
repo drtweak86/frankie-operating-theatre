@@ -1,77 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Frankie OT: GitHub SSH setup ==="
+read -rp "Git user.name: " GNAME
+read -rp "Git user.email: " GEMAIL
 
-# Prompt for username
-if [ -z "${GIT_USER_NAME:-}" ]; then
-  read -rp "Enter your GitHub username: " GIT_USER_NAME
-fi
+git config --global user.name "$GNAME"
+git config --global user.email "$GEMAIL"
+git config --global init.defaultBranch main
+git config --global pull.rebase false
 
-# Prompt for email
-if [ -z "${GIT_USER_EMAIL:-}" ]; then
-  read -rp "Enter your email associated with GitHub: " GIT_USER_EMAIL
-fi
-
-KEY_COMMENT="${GIT_USER_NAME}@github"
-KEY_PATH="${HOME}/.ssh/id_ed25519"
-
-# Confirm details
-echo
-echo "→ Username: ${GIT_USER_NAME}"
-echo "→ Email:    ${GIT_USER_EMAIL}"
-read -rp "Proceed? (y/N) " confirm
-[[ "${confirm,,}" == "y" ]] || { echo "Aborted."; exit 1; }
-echo
-
-# Ensure .ssh exists
-mkdir -p "${HOME}/.ssh"
-chmod 700 "${HOME}/.ssh"
-
-# Generate key if missing
-if [ ! -f "${KEY_PATH}" ]; then
-  echo "→ Generating SSH key..."
-  ssh-keygen -t ed25519 -C "${KEY_COMMENT}" -f "${KEY_PATH}" -N ""
+# SSH key
+KEY="${HOME}/.ssh/id_ed25519"
+if [[ -f "${KEY}" ]]; then
+  echo "SSH key already exists at ${KEY}"
 else
-  echo "→ SSH key already exists: ${KEY_PATH}"
+  read -rp "Enter an optional label for the SSH key (e.g. pi@frankie): " LABEL
+  ssh-keygen -t ed25519 -a 100 -f "${KEY}" -N "" -C "${LABEL:-${GEMAIL}}"
 fi
+eval "$(ssh-agent -s)"
+ssh-add "${KEY}"
 
-# Start agent + load key
-if ! pgrep -u "$USER" ssh-agent >/dev/null 2>&1; then
-  eval "$(ssh-agent -s)" >/dev/null
-fi
-ssh-add "${KEY_PATH}" >/dev/null 2>&1 || true
-
-# Print public key
+echo "=== Public key (paste this into GitHub → Settings → SSH and GPG keys) ==="
 echo
-echo "=== COPY THIS INTO: GitHub → Settings → SSH & GPG Keys ==="
+cat "${KEY}.pub"
 echo
-cat "${KEY_PATH}.pub"
-echo
-echo "=========================================================="
-echo
-
-# Git identity & SSH preference
-git config --global user.name  "${GIT_USER_NAME}"
-git config --global user.email "${GIT_USER_EMAIL}"
-git config --global url."git@github.com:".insteadOf "https://github.com/"
-
-# Auto-load key on login
-if ! grep -q "FRANKIE_OT_SSH_AGENT" "${HOME}/.bashrc"; then
-  cat >> "${HOME}/.bashrc" <<'EOF'
-
-# FRANKIE_OT_SSH_AGENT
-if ! pgrep -u "$USER" ssh-agent >/dev/null 2>&1; then
-  eval "$(ssh-agent -s)" >/dev/null
-fi
-ssh-add ~/.ssh/id_ed25519 >/dev/null 2>&1 || true
-EOF
-fi
-
-# Test connection (won't break script)
-echo "Testing GitHub SSH..."
-ssh -T git@github.com || true
-
-echo
-echo "✅ Done."
-echo "   Paste the public key into GitHub and you’re ready to push/pull."
+echo "Tip: test with 'ssh -T git@github.com' (type 'yes' once)."
