@@ -1,71 +1,64 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Frankie Operating Theatre: Workstation Rebuild ==="
+echo "=== Frankie Operating Theatre: Debian Workstation Setup ==="
 
-# Detect model and warn unless Pi 4 or Pi 5
+# Detect model (informational only)
 MODEL="$(tr -d '\0' </proc/device-tree/model 2>/dev/null || echo 'Unknown')"
 echo "Detected: ${MODEL}"
-if ! echo "$MODEL" | grep -Eq 'Raspberry Pi (4|5)'; then
-  echo "⚠️  This script is tuned for Raspberry Pi 4/5."
-  read -rp "Continue anyway? (y/N) " yn
-  [[ "${yn,,}" == "y" ]] || { echo "Aborting."; exit 1; }
-fi
 
-echo "=== Updating system ==="
-sudo apt update -y
+echo "=== Update & Upgrade ==="
+sudo apt update
 sudo apt full-upgrade -y
 
-echo "=== Installing Full Workstation Toolset ==="
-sudo apt install -y \
-  build-essential bc bison flex libssl-dev libncurses5-dev libelf-dev \
-  libusb-dev libudev-dev libtool meson ninja-build cmake pkg-config gperf \
-  qemu-user-static genimage mtools dosfstools parted gddrescue \
-  e2fsprogs exfatprogs exfat-fuse \
-  kodi ffmpeg libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-  libinput-dev mesa-utils alsa-utils pulseaudio pavucontrol \
-  python3 python3-dev python3-pip python3-setuptools python3-venv \
-  git curl wget openssh-server net-tools iproute2 network-manager \
-  firmware-brcm80211 \
-  htop fastfetch ncdu gparted thunar zip unzip xz-utils tar file jq \
-  tmux screen vim nano usbutils pciutils \
-  ufw fail2ban \
-  xfce4 xfce4-goodies \
-  arc-theme papirus-icon-theme \
-  plank conky-all \
-  vlc lsb-release
-
-echo "=== Installing Argon ONE Fan Driver ==="
-curl -s https://download.argon40.com/argon1.sh | bash || true
-
-echo "=== XFCE theming (Arc-Dark + Papirus) ==="
-xfconf-query -c xsettings -p /Net/ThemeName -s "Arc-Dark" || true
-xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus" || true
-
-echo "=== Enable Plank dock at startup ==="
-mkdir -p "${HOME}/.config/autostart"
-cp /usr/share/applications/plank.desktop "${HOME}/.config/autostart/" 2>/dev/null || true
-
-echo "=== Disabling screen blanking & power saving ==="
-
-# 1) Runtime (immediate)
-xset -dpms || true
-xset s off || true
-xset s noblank || true
-
-# 2) Permanent desktop config for XFCE
-mkdir -p "${HOME}/.config/autostart"
-cat <<EOF > "${HOME}/.config/autostart/nosleep.desktop"
-[Desktop Entry]
-Type=Application
-Name=NoSleep
-Exec=xset s off -dpms
-EOF
-
-# 3) System-wide LightDM config (prevents blank before login)
+echo "=== Desktop & Display Manager (XFCE + LightDM) ==="
+sudo apt install -y xfce4 xfce4-goodies lightdm lightdm-gtk-greeter
+# Force LightDM + XFCE as session (bypass Pi-specific sessions)
 sudo mkdir -p /etc/lightdm/lightdm.conf.d
-echo "[Seat:*]" | sudo tee /etc/lightdm/lightdm.conf.d/50-no-blanking.conf > /dev/null
-echo "xserver-command=X -s 0 -dpms" | sudo tee -a /etc/lightdm/lightdm.conf.d/50-no-blanking.conf > /dev/null
+printf "[Seat:*]\nuser-session=xfce\n" | sudo tee /etc/lightdm/lightdm.conf.d/50-xfce.conf >/dev/null
+sudo update-alternatives --set x-session-manager /usr/bin/xfce4-session || true
+sudo update-alternatives --set x-window-manager /usr/bin/xfwm4 || true
+sudo systemctl enable --now lightdm
 
-echo "=== ✅ Screen will NEVER turn off, blank, or dim. ==="
-echo "=== ✅ Build complete. Reboot recommended. ==="
+echo "=== Core Dev Tooling & CLI QoL ==="
+sudo apt install -y \
+  build-essential cmake pkg-config git curl wget ca-certificates gnupg lsb-release \
+  bc bison flex libssl-dev libncurses5-dev libelf-dev \
+  python3 python3-venv python3-pip python3-setuptools \
+  fastfetch htop ncdu duf dust tmux screen vim nano file jq ripgrep fd-find \
+  aria2 rsync zip unzip xz-utils p7zip-full p7zip-rar pv \
+  net-tools iproute2 dnsutils openssh-server \
+  gparted gnome-disk-utility
+
+echo "=== Multimedia / GPU bits (for Kodi builds later) ==="
+sudo apt install -y \
+  ffmpeg mesa-utils libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev libinput-dev \
+  alsa-utils pulseaudio pavucontrol
+
+echo "=== Optional: Docker (handy later; logout required to take effect) ==="
+sudo apt install -y docker.io docker-compose-plugin || true
+sudo usermod -aG docker "$USER" || true
+
+echo "=== Optional: Timeshift (easy system restore points) ==="
+sudo apt install -y timeshift || true
+
+echo "=== Theming (nice defaults) ==="
+sudo apt install -y arc-theme papirus-icon-theme plank conky-all || true
+
+echo "=== SSH enable (so you can hop in from phone/PC) ==="
+sudo systemctl enable --now ssh
+
+echo "=== Stop screen blanking (XFCE) ==="
+# xset on login for the current user
+if ! grep -q "xset -dpms" "${HOME}/.xprofile" 2>/dev/null; then
+  {
+    echo 'xset -dpms'
+    echo 'xset s off'
+    echo 'xset s noblank'
+  } >> "${HOME}/.xprofile"
+fi
+
+echo "=== Optional: Argon One support (uncomment to enable) ==="
+# curl -fsSL https://download.argon40.com/argon1.sh | bash
+
+echo "=== Done. Reboot recommended. ==="
