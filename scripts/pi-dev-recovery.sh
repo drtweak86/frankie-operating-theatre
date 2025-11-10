@@ -10,15 +10,24 @@ echo ">> Dev/Recovery setup for $USER_NAME on Ubuntu $CODENAME"
 sudo apt update
 
 # Filesystems, imaging, partitioning, diagnostics
-sudo apt install -y \
-  gparted gnome-disk-utility \
-  parted dosfstools exfatprogs ntfs-3g btrfs-progs xfsprogs \
-  e2fsprogs mtools \
-  usbutils pciutils smartmontools lshw hdparm \
-  ddrescue util-linux udisks2 \
-  rpi-imager \
-  rsync pv unzip zip \
-  gvfs-backends
+echo "[+] Installing recovery & disk utilities"
+sudo apt-get update -y
+sudo apt-get install -y \
+  gddrescue \
+  testdisk \
+  gparted \
+  smartmontools \
+  btrfs-progs \
+  lvm2 \
+  mdadm \
+  gdisk \
+  rsync \
+  pv \
+  f2fs-tools \
+  exfatprogs \
+  ntfs-3g \
+  parted \
+  usbutils
 
 # Network & troubleshooting
 sudo apt install -y \
@@ -35,6 +44,11 @@ if curl -fsSL https://download.argon40.com/argon1.sh -o /tmp/argon.sh; then
   bash /tmp/argon.sh || true
   rm -f /tmp/argon.sh
 fi
+
+echo "[+] Enabling smartmontools service"
+sudo systemctl enable --now smartd.service || true
+
+echo "[✓] Dev & recovery tools installed."
 
 # Handy aliases
 BASHRC="${HOME_DIR}/.bashrc"
